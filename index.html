@@ -1,0 +1,1120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Schengen Tracker</title>
+<style>
+  :root {
+    --bg: #0a0a0b;
+    --surface: #141416;
+    --surface2: #1c1c1f;
+    --surface3: #232326;
+    --border: #2a2a2e;
+    --text: #e4e4e7;
+    --text2: #a1a1aa;
+    --text3: #71717a;
+    --accent: #6366f1;
+    --accent2: #818cf8;
+    --green: #22c55e;
+    --green-dim: rgba(34, 197, 94, 0.12);
+    --green-border: rgba(34, 197, 94, 0.25);
+    --amber: #f59e0b;
+    --red: #ef4444;
+    --red-dim: rgba(239, 68, 68, 0.12);
+    --red-border: rgba(239, 68, 68, 0.25);
+    --indigo-dim: rgba(99, 102, 241, 0.10);
+    --indigo-border: rgba(99, 102, 241, 0.25);
+    --radius: 12px;
+    --radius-sm: 8px;
+    --space-xs: 0.25rem;
+    --space-sm: 0.5rem;
+    --space-md: 0.75rem;
+    --space-lg: 1rem;
+    --space-xl: 1.5rem;
+    --space-2xl: 2rem;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding: var(--space-2xl) var(--space-lg);
+  }
+
+  .container { max-width: 640px; margin: 0 auto; }
+
+  header { text-align: center; margin-bottom: var(--space-2xl); }
+
+  header h1 {
+    font-size: 1.5rem;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    margin-bottom: var(--space-xs);
+  }
+
+  header p { color: var(--text2); font-size: 0.85rem; }
+
+  /* Ring gauge */
+  .gauge-wrap { display: flex; justify-content: center; margin-bottom: var(--space-2xl); }
+
+  .gauge { position: relative; width: 200px; height: 200px; }
+
+  .gauge svg { transform: rotate(-90deg); width: 200px; height: 200px; }
+
+  .gauge circle { fill: none; stroke-width: 10; cx: 100; cy: 100; r: 88; }
+
+  .gauge .track { stroke: var(--surface2); }
+
+  .gauge .fill {
+    stroke-linecap: round;
+    transition: stroke-dashoffset 0.8s ease, stroke 0.5s ease;
+  }
+
+  .gauge-center {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+  }
+
+  .gauge-number {
+    font-size: 2.8rem; font-weight: 700; line-height: 1; letter-spacing: -0.04em;
+  }
+
+  .gauge-label {
+    font-size: 0.75rem; color: var(--text2); margin-top: var(--space-xs);
+    text-transform: uppercase; letter-spacing: 0.08em;
+  }
+
+  /* Stats */
+  .stats {
+    display: grid; grid-template-columns: repeat(3, 1fr);
+    gap: var(--space-md); margin-bottom: var(--space-2xl);
+  }
+
+  .stat {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: var(--space-lg); text-align: center;
+  }
+
+  .stat-value { font-size: 1.4rem; font-weight: 700; letter-spacing: -0.02em; }
+
+  .stat-label {
+    font-size: 0.7rem; color: var(--text2); margin-top: var(--space-xs);
+    text-transform: uppercase; letter-spacing: 0.06em;
+  }
+
+  /* Alert */
+  .alert {
+    border-radius: var(--radius); padding: 0.85rem var(--space-lg);
+    margin-bottom: var(--space-2xl); font-size: 0.85rem; font-weight: 500; border: 1px solid;
+  }
+
+  .alert-ok    { background: var(--green-dim); border-color: var(--green-border); color: var(--green); }
+  .alert-warn  { background: rgba(245,158,11,0.08); border-color: rgba(245,158,11,0.2); color: var(--amber); }
+  .alert-danger { background: var(--red-dim); border-color: var(--red-border); color: var(--red); }
+
+  /* Cards */
+  .card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: var(--space-xl);
+    margin-bottom: var(--space-xl);
+  }
+
+  .card h2 {
+    font-size: 0.85rem; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 0.06em; color: var(--text2); margin-bottom: var(--space-lg);
+  }
+
+  /* Badges */
+  .badge {
+    display: inline-block;
+    font-size: 0.65rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    padding: 0.2rem 0.6rem;
+    border-radius: 20px;
+    margin-bottom: var(--space-xs);
+  }
+
+  .badge-green  { background: var(--green-dim); color: var(--green); border: 1px solid var(--green-border); }
+  .badge-red    { background: var(--red-dim); color: var(--red); border: 1px solid var(--red-border); }
+  .badge-indigo { background: var(--indigo-dim); color: var(--accent2); border: 1px solid var(--indigo-border); }
+
+  /* Date sections */
+  .date-section {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: var(--space-lg);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-xs);
+    max-width: 220px;
+    margin: 0 auto;
+  }
+
+  .date-section .date-format-hint {
+    font-size: 0.65rem;
+    color: var(--text3);
+    letter-spacing: 0.1em;
+  }
+
+  .date-section input[type="date"] {
+    background: var(--surface3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 0.4rem 0.5rem;
+    color: var(--text);
+    font-size: 0.85rem;
+    font-family: inherit;
+    outline: none;
+    text-align: center;
+    width: 155px;
+    transition: border-color 0.2s;
+  }
+
+  .date-section input[type="date"]:focus { border-color: var(--accent); }
+
+  .date-section input[type="date"]::-webkit-calendar-picker-indicator {
+    filter: invert(1); cursor: pointer; opacity: 0.9;
+  }
+
+  .date-section input[type="date"]::-webkit-calendar-picker-indicator:hover { opacity: 1; }
+
+  /* Stay section */
+  .stay-section {
+    background: var(--indigo-dim);
+    border: 1px solid var(--indigo-border);
+    border-radius: var(--radius);
+    padding: var(--space-md) var(--space-lg);
+    margin: var(--space-lg) auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-sm);
+    max-width: 220px;
+  }
+
+  .duration-display {
+    font-size: 1.3rem; font-weight: 700; color: var(--accent2);
+    text-align: center; white-space: nowrap;
+  }
+
+  .duration-controls {
+    display: flex; align-items: center; justify-content: center; gap: var(--space-sm);
+  }
+
+  .btn-dur {
+    background: var(--surface2) !important; color: var(--accent2) !important;
+    border: 1px solid var(--indigo-border) !important; border-radius: 6px;
+    padding: 0.2rem 0.7rem; font-size: 0.8rem; font-weight: 700; min-width: 36px;
+    font-family: inherit; cursor: pointer; transition: all 0.2s;
+  }
+
+  .btn-dur:hover { background: var(--accent) !important; color: white !important; border-color: var(--accent) !important; }
+
+  /* Country */
+  .country-section {
+    margin-top: var(--space-xl);
+    margin-bottom: var(--space-xl);
+  }
+
+  .country-section label {
+    display: block;
+    font-size: 0.75rem;
+    color: var(--text2);
+    font-weight: 500;
+    margin-bottom: var(--space-sm);
+  }
+
+  .country-section input[type="text"] {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 0.6rem 0.75rem;
+    color: var(--text);
+    font-size: 0.9rem;
+    font-family: inherit;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  .country-section input[type="text"]:focus { border-color: var(--accent); }
+
+  /* Buttons */
+  button {
+    font-family: inherit; font-size: 0.85rem; font-weight: 600;
+    border: none; border-radius: var(--radius-sm);
+    padding: 0.65rem var(--space-xl); cursor: pointer; transition: all 0.2s;
+  }
+
+  .btn-primary { background: var(--accent); color: white; width: 100%; }
+  .btn-primary:hover { background: var(--accent2); }
+
+  /* Trip list */
+  .trip-list { list-style: none; }
+
+  .trip-item {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: var(--space-md) 0; border-bottom: 1px solid var(--border);
+  }
+
+  .trip-item:last-child { border-bottom: none; }
+
+  .trip-number {
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: var(--text3);
+    background: var(--surface2);
+    border-radius: 50%;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    margin-right: var(--space-md);
+  }
+
+  .trip-info { flex: 1; }
+  .trip-dates { font-size: 0.9rem; font-weight: 500; }
+  .trip-meta { font-size: 0.75rem; color: var(--text2); margin-top: 0.15rem; }
+
+  .trip-actions {
+    display: flex; flex-direction: column; gap: var(--space-xs); flex-shrink: 0;
+  }
+
+  .btn-edit {
+    background: transparent; color: var(--accent2);
+    padding: 0.3rem 0.6rem; font-size: 0.7rem; border-radius: 6px;
+    font-family: inherit; font-weight: 600; cursor: pointer;
+    border: 1px solid var(--indigo-border); transition: all 0.2s;
+  }
+
+  .btn-edit:hover { background: var(--indigo-dim); }
+
+  .btn-delete {
+    background: transparent; color: var(--text3);
+    padding: 0.3rem 0.6rem; font-size: 0.7rem; border-radius: 6px;
+    border: 1px solid transparent;
+  }
+
+  .btn-delete:hover { background: var(--red-dim); color: var(--red); border-color: var(--red-border); }
+
+  .edit-form {
+    padding: var(--space-md);
+    background: var(--surface2);
+    border: 1px solid var(--indigo-border);
+    border-radius: var(--radius-sm);
+    margin-top: var(--space-sm);
+  }
+
+  .edit-row {
+    display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-sm);
+    margin-bottom: var(--space-sm);
+  }
+
+  .edit-field { display: flex; flex-direction: column; gap: 2px; }
+
+  .edit-field label {
+    font-size: 0.65rem; color: var(--text3); text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  .edit-field input {
+    background: var(--surface3); border: 1px solid var(--border);
+    border-radius: 6px; padding: 0.35rem 0.5rem; color: var(--text);
+    font-size: 0.8rem; font-family: inherit; outline: none;
+  }
+
+  .edit-field input:focus { border-color: var(--accent); }
+
+  .edit-field input[type="date"]::-webkit-calendar-picker-indicator {
+    filter: invert(1); cursor: pointer; opacity: 0.8;
+  }
+
+  .edit-buttons {
+    display: flex; gap: var(--space-sm); margin-top: var(--space-sm);
+  }
+
+  .btn-save {
+    background: var(--accent); color: white; flex: 1;
+    padding: 0.4rem; font-size: 0.75rem; font-weight: 600;
+    font-family: inherit; border: none; border-radius: 6px; cursor: pointer;
+  }
+
+  .btn-save:hover { background: var(--accent2); }
+
+  .btn-cancel {
+    background: transparent; color: var(--text2); flex: 1;
+    padding: 0.4rem; font-size: 0.75rem; font-weight: 600;
+    font-family: inherit; border: 1px solid var(--border); border-radius: 6px; cursor: pointer;
+  }
+
+  .btn-cancel:hover { background: var(--surface3); }
+
+  /* Current trip */
+  .btn-current {
+    background: var(--green); color: #000; width: 100%;
+    font-weight: 700; padding: 0.65rem var(--space-xl);
+    font-family: inherit; font-size: 0.85rem;
+    border: none; border-radius: var(--radius-sm); cursor: pointer;
+    transition: all 0.2s;
+  }
+  .btn-current:hover { background: #16a34a; }
+
+  .btn-end-trip {
+    background: transparent; color: var(--red);
+    border: 1px solid var(--red-border); width: 100%;
+    font-weight: 600; padding: 0.55rem var(--space-xl);
+    font-family: inherit; font-size: 0.8rem;
+    border-radius: var(--radius-sm); cursor: pointer;
+    transition: all 0.2s; margin-top: var(--space-lg);
+  }
+  .btn-end-trip:hover { background: var(--red-dim); }
+
+  .current-trip-header {
+    display: flex; align-items: center; gap: var(--space-sm);
+    margin-bottom: var(--space-lg);
+  }
+
+  .current-trip-summary {
+    font-size: 0.8rem; color: var(--text2);
+  }
+
+  .current-stay-info {
+    display: flex; flex-direction: column; gap: var(--space-sm);
+    margin-bottom: var(--space-lg);
+  }
+
+  .current-stay-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: var(--space-sm) var(--space-md);
+    background: var(--surface2); border-radius: var(--radius-sm);
+  }
+
+  .current-stay-label {
+    font-size: 0.75rem; color: var(--text2); text-transform: uppercase;
+    letter-spacing: 0.04em; font-weight: 500;
+  }
+
+  .current-stay-value {
+    font-size: 0.9rem; font-weight: 600;
+  }
+
+  .highlight-row {
+    background: var(--surface3);
+    border: 1px solid var(--border);
+  }
+
+  .falloff-header {
+    margin-top: var(--space-lg);
+    margin-bottom: var(--space-sm);
+    padding-bottom: var(--space-sm);
+    border-top: 1px solid var(--border);
+    padding-top: var(--space-lg);
+  }
+
+  .falloff-title {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--text2);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  .current-falloff {
+    font-size: 0.8rem; color: var(--text2);
+    margin-bottom: var(--space-sm);
+  }
+
+  .falloff-item {
+    display: flex; justify-content: space-between;
+    padding: var(--space-xs) 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 0.75rem;
+  }
+
+  .falloff-item:last-child { border-bottom: none; }
+
+  .falloff-date { color: var(--green); font-weight: 600; }
+
+  .add-past-trigger {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-sm);
+    padding: var(--space-lg);
+    margin-bottom: var(--space-xl);
+    cursor: pointer;
+    user-select: none;
+    transition: all 0.2s;
+    border-radius: var(--radius);
+  }
+
+  .add-past-trigger:hover .collapse-plus {
+    background: var(--accent);
+    color: white;
+    border-color: var(--accent);
+  }
+
+  .badge-past {
+    background: var(--surface2);
+    color: var(--text);
+    border: 1px solid var(--border);
+    font-size: 0.8rem;
+    padding: 0.3rem 1rem;
+  }
+
+  .collapse-plus {
+    font-size: 1.4rem;
+    font-weight: 300;
+    color: var(--accent2);
+    background: var(--indigo-dim);
+    border: 1px solid var(--indigo-border);
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+    transition: all 0.2s;
+  }
+
+  .collapsible:hover .collapse-plus {
+    background: var(--accent);
+    color: white;
+    border-color: var(--accent);
+  }
+
+  .collapse-plus.open {
+    transform: rotate(45deg);
+  }
+
+  .empty { text-align: center; color: var(--text2); font-size: 0.85rem; padding: var(--space-xl) 0; }
+
+  .card-subtitle {
+    font-size: 0.65rem;
+    font-weight: 400;
+    color: var(--text3);
+    letter-spacing: 0.02em;
+    text-transform: none;
+  }
+
+  .trip-expires {
+    font-size: 0.65rem;
+    color: var(--text3);
+  }
+
+  .trip-expired {
+    font-size: 0.65rem;
+    color: var(--text3);
+    font-style: italic;
+  }
+
+  @media (max-width: 480px) {
+    .stats { grid-template-columns: 1fr; }
+    .gauge { width: 160px; height: 160px; }
+    .gauge svg { width: 160px; height: 160px; }
+    .gauge circle { cx: 80; cy: 80; r: 68; }
+    .gauge-number { font-size: 2.2rem; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <h1>Schengen Tracker</h1>
+    <p>90 / 180-day rolling window</p>
+  </header>
+
+  <div class="gauge-wrap">
+    <div class="gauge">
+      <svg viewBox="0 0 200 200">
+        <circle class="track"/>
+        <circle class="fill" id="gaugeFill"/>
+      </svg>
+      <div class="gauge-center">
+        <div class="gauge-number" id="gaugeNumber">0</div>
+        <div class="gauge-label">days remaining</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="stats">
+    <div class="stat">
+      <div class="stat-value" id="statUsed">0</div>
+      <div class="stat-label">Used</div>
+    </div>
+    <div class="stat">
+      <div class="stat-value" id="statCanStay">—</div>
+      <div class="stat-label">Can still stay</div>
+    </div>
+    <div class="stat">
+      <div class="stat-value" id="statLeaveBy">—</div>
+      <div class="stat-label">Leave by</div>
+    </div>
+  </div>
+
+  <div id="alertBanner"></div>
+
+  <div class="card" id="currentTripCard">
+    <h2>Current Trip</h2>
+    <div id="currentTripContent">
+      <div class="current-trip-form">
+        <div class="date-section" style="margin-bottom: var(--space-lg);">
+          <span class="badge badge-green">ENTERED ON</span>
+          <div class="date-format-hint">MM / DD / YYYY</div>
+          <input type="date" id="currentEntryDate">
+        </div>
+        <div class="country-section" style="margin-top: 0;">
+          <label for="currentCountry">Country (optional)</label>
+          <input type="text" id="currentCountry" placeholder="e.g. France">
+        </div>
+        <button type="button" class="btn-current" onclick="startCurrentTrip()">I'm in the Schengen Zone</button>
+      </div>
+    </div>
+    <div id="currentTripActive" style="display:none;">
+      <div class="current-trip-status">
+        <div class="current-trip-header">
+          <span class="badge badge-green">IN SCHENGEN</span>
+          <span id="currentTripSummary" class="current-trip-summary"></span>
+        </div>
+        <div class="current-stay-info">
+          <div class="current-stay-row">
+            <span class="current-stay-label">Entered</span>
+            <span class="current-stay-value" id="ctEntered"></span>
+          </div>
+          <div class="current-stay-row">
+            <span class="current-stay-label">Days so far</span>
+            <span class="current-stay-value" id="ctDaysSoFar"></span>
+          </div>
+          <div class="current-stay-row">
+            <span class="current-stay-label">Days used of 90</span>
+            <span class="current-stay-value" id="ctUsedOf90"></span>
+          </div>
+          <div class="current-stay-row highlight-row">
+            <span class="current-stay-label">Days remaining</span>
+            <span class="current-stay-value" id="ctSimpleRemaining"></span>
+          </div>
+        </div>
+        <div id="ctFalloffSection" style="display:none;">
+          <div class="falloff-header">
+            <span class="falloff-title">With upcoming falloffs</span>
+          </div>
+          <div class="current-stay-info">
+            <div class="current-stay-row">
+              <span class="current-stay-label">Can stay until</span>
+              <span class="current-stay-value" id="ctCanStayUntil"></span>
+            </div>
+            <div class="current-stay-row highlight-row">
+              <span class="current-stay-label">Total days left</span>
+              <span class="current-stay-value" id="ctDaysLeft"></span>
+            </div>
+          </div>
+          <div id="ctFalloffInfo" class="current-falloff"></div>
+        </div>
+        <button type="button" class="btn-end-trip" onclick="endCurrentTrip()">End Trip (I've left)</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="add-past-trigger" onclick="togglePastTrip()">
+    <span class="collapse-plus" id="pastTripArrow">+</span>
+    <span class="badge badge-past">Add Past Trip</span>
+  </div>
+  <div class="card" id="pastTripCard" style="display:none;">
+    <div id="pastTripForm">
+
+    <div class="date-section">
+      <span class="badge badge-green">ENTRY</span>
+      <div class="date-format-hint">MM / DD / YYYY</div>
+      <input type="date" id="entryDate">
+    </div>
+
+    <div class="stay-section">
+      <span class="badge badge-indigo">STAY</span>
+      <div class="duration-display" id="tripHint">2 days</div>
+      <div class="duration-controls">
+        <button type="button" class="btn-dur" onclick="adjustDuration(1)">+1</button>
+        <button type="button" class="btn-dur" onclick="adjustDuration(-1)">-1</button>
+      </div>
+    </div>
+
+    <div class="date-section">
+      <span class="badge badge-red">EXIT</span>
+      <div class="date-format-hint">MM / DD / YYYY</div>
+      <input type="date" id="exitDate">
+    </div>
+
+    <div class="country-section">
+      <label for="country">Country (optional)</label>
+      <input type="text" id="country" placeholder="e.g. France">
+    </div>
+
+    <button type="button" class="btn-primary" onclick="addTrip()">Add New Trip</button>
+    </div>
+  </div>
+
+  <div class="card" id="activeTripsCard" style="display:none;">
+    <h2>Active Trips <span class="card-subtitle">counting towards 90 / 180 limit</span></h2>
+    <ul class="trip-list" id="activeTrips"></ul>
+  </div>
+
+  <div class="card" id="pastTripsCard" style="display:none;">
+    <h2>Past Trips <span class="card-subtitle">no longer counting</span></h2>
+    <ul class="trip-list" id="pastTrips"></ul>
+  </div>
+</div>
+
+<script>
+const STORAGE_KEY = 'schengen_trips';
+
+function loadTrips() {
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; }
+  catch { return []; }
+}
+
+function saveTrips(trips) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(trips));
+}
+
+function toDate(s) { return new Date(s + 'T00:00:00'); }
+function fmt(d) { return d.toISOString().slice(0, 10); }
+function fmtShort(d) {
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+function fmtMed(d) {
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+function daysBetween(a, b) { return Math.round((b - a) / 86400000); }
+
+function addDays(d, n) {
+  const r = new Date(d);
+  r.setDate(r.getDate() + n);
+  return r;
+}
+
+function calcDaysUsed(trips, refDate) {
+  if (!refDate) refDate = new Date();
+  const ref = new Date(refDate.getFullYear(), refDate.getMonth(), refDate.getDate());
+  const windowStart = addDays(ref, -179);
+  const days = new Set();
+  for (const t of trips) {
+    const entry = toDate(t.entry) < windowStart ? windowStart : toDate(t.entry);
+    const exit = toDate(t.exit) > ref ? ref : toDate(t.exit);
+    if (entry <= exit) {
+      const n = daysBetween(entry, exit);
+      for (let i = 0; i <= n; i++) days.add(fmt(addDays(entry, i)));
+    }
+  }
+  return days.size;
+}
+
+function isCurrentlyIn(trips) {
+  const today = fmt(new Date());
+  return trips.some(t => t.entry <= today && t.exit >= today);
+}
+
+function calcRemainingStay(trips) {
+  if (!isCurrentlyIn(trips)) return null;
+  const today = new Date();
+  today.setHours(0,0,0,0);
+  for (let offset = 0; offset < 180; offset++) {
+    const future = addDays(today, offset);
+    const hypo = trips.map(t => {
+      const td = fmt(today);
+      if (t.entry <= td && t.exit >= td) {
+        return { ...t, exit: fmt(future) > t.exit ? fmt(future) : t.exit };
+      }
+      return t;
+    });
+    if (calcDaysUsed(hypo, future) > 90) {
+      if (offset === 0) return { days: 0, leaveBy: today };
+      return { days: offset - 1, leaveBy: addDays(today, offset - 1) };
+    }
+  }
+  return { days: 179, leaveBy: addDays(today, 179) };
+}
+
+// --- Gauge ---
+function updateGauge(used) {
+  const remaining = Math.max(0, 90 - used);
+  const fraction = Math.min(used / 90, 1);
+  const isMobile = window.innerWidth <= 480;
+  const r = isMobile ? 68 : 88;
+  const circ = 2 * Math.PI * r;
+  const fill = document.getElementById('gaugeFill');
+  fill.style.strokeDasharray = circ;
+  fill.style.strokeDashoffset = circ * (1 - fraction);
+  if (fraction <= 0.55) fill.style.stroke = 'var(--green)';
+  else if (fraction <= 0.8) fill.style.stroke = 'var(--amber)';
+  else fill.style.stroke = 'var(--red)';
+  document.getElementById('gaugeNumber').textContent = remaining;
+}
+
+// --- Render ---
+function render() {
+  renderCurrentTrip();
+
+  const trips = loadTrips();
+  // Include current trip in all calculations
+  const ct = loadCurrentTrip();
+  const allTrips = ct ? [...trips, { entry: ct.entry, exit: fmt(new Date()), country: ct.country || '' }] : trips;
+
+  const used = calcDaysUsed(allTrips);
+  const remaining = Math.max(0, 90 - used);
+  updateGauge(used);
+  document.getElementById('statUsed').textContent = used;
+  const stay = calcRemainingStay(allTrips);
+  if (stay) {
+    document.getElementById('statCanStay').textContent = stay.days;
+    document.getElementById('statLeaveBy').textContent = fmtShort(stay.leaveBy);
+  } else {
+    document.getElementById('statCanStay').textContent = '—';
+    document.getElementById('statLeaveBy').textContent = '—';
+  }
+  const banner = document.getElementById('alertBanner');
+  if (stay && stay.days === 0) {
+    banner.innerHTML = `<div class="alert alert-danger">You must leave the Schengen Zone today.</div>`;
+  } else if (stay && stay.days <= 7) {
+    banner.innerHTML = `<div class="alert alert-warn">You must leave by ${fmtMed(stay.leaveBy)} — ${stay.days} day${stay.days !== 1 ? 's' : ''} left.</div>`;
+  } else if (stay) {
+    banner.innerHTML = `<div class="alert alert-ok">You can stay until ${fmtMed(stay.leaveBy)} — ${stay.days} more day${stay.days !== 1 ? 's' : ''}.</div>`;
+  } else if (remaining === 0) {
+    banner.innerHTML = `<div class="alert alert-danger">You've used all 90 days. Wait for days to drop off the window.</div>`;
+  } else if (remaining <= 14) {
+    banner.innerHTML = `<div class="alert alert-warn">${remaining} day${remaining !== 1 ? 's' : ''} remaining in the current window.</div>`;
+  } else {
+    banner.innerHTML = '';
+  }
+  // Split trips into active (within 180-day window) and past
+  const today = new Date();
+  today.setHours(0,0,0,0);
+  const windowStart = addDays(today, -179);
+
+  const active = [];
+  const past = [];
+
+  trips.forEach((t, idx) => {
+    const exit = toDate(t.exit);
+    if (exit >= windowStart) {
+      active.push({ ...t, idx });
+    } else {
+      past.push({ ...t, idx });
+    }
+  });
+
+  const activeCard = document.getElementById('activeTripsCard');
+  const pastCard = document.getElementById('pastTripsCard');
+  const activeList = document.getElementById('activeTrips');
+  const pastList = document.getElementById('pastTrips');
+
+  if (active.length === 0 && past.length === 0) {
+    activeCard.style.display = 'none';
+    pastCard.style.display = 'none';
+    return;
+  }
+
+  // Active trips
+  if (active.length > 0) {
+    activeCard.style.display = '';
+    const sorted = [...active].sort((a, b) => a.entry.localeCompare(b.entry));
+    activeList.innerHTML = sorted.map((t, i) => {
+      const days = daysBetween(toDate(t.entry), toDate(t.exit)) + 1;
+      const country = t.country ? ` · ${t.country}` : '';
+      const exitDate = toDate(t.exit);
+      const fallsOff = addDays(exitDate, 180);
+      const daysUntilOff = daysBetween(today, fallsOff);
+      const expiryNote = `Falls off ${fmtMed(fallsOff)} (${daysUntilOff} days)`;
+      return `<li class="trip-item" id="trip-${t.idx}">
+        <span class="trip-number">${i + 1}</span>
+        <div class="trip-info">
+          <div class="trip-dates">${fmtMed(toDate(t.entry))} → ${fmtMed(toDate(t.exit))}</div>
+          <div class="trip-meta">${days} day${days !== 1 ? 's' : ''}${country}</div>
+          <div class="trip-expires">${expiryNote}</div>
+        </div>
+        <div class="trip-actions">
+          <button type="button" class="btn-edit" onclick="editTrip(${t.idx})">Edit</button>
+          <button type="button" class="btn-delete" onclick="deleteTrip(${t.idx})">Remove</button>
+        </div>
+      </li>`;
+    }).join('');
+  } else {
+    activeCard.style.display = 'none';
+  }
+
+  // Past trips
+  if (past.length > 0) {
+    pastCard.style.display = '';
+    const sorted = [...past].sort((a, b) => a.entry.localeCompare(b.entry));
+    pastList.innerHTML = sorted.map((t, i) => {
+      const days = daysBetween(toDate(t.entry), toDate(t.exit)) + 1;
+      const country = t.country ? ` · ${t.country}` : '';
+      return `<li class="trip-item" id="trip-${t.idx}">
+        <span class="trip-number">${i + 1}</span>
+        <div class="trip-info">
+          <div class="trip-dates">${fmtMed(toDate(t.entry))} → ${fmtMed(toDate(t.exit))}</div>
+          <div class="trip-meta">${days} day${days !== 1 ? 's' : ''}${country}</div>
+          <div class="trip-expired">No longer counting</div>
+        </div>
+        <div class="trip-actions">
+          <button type="button" class="btn-edit" onclick="editTrip(${t.idx})">Edit</button>
+          <button type="button" class="btn-delete" onclick="deleteTrip(${t.idx})">Remove</button>
+        </div>
+      </li>`;
+    }).join('');
+  } else {
+    pastCard.style.display = 'none';
+  }
+}
+
+// --- Current trip ---
+const CT_KEY = 'schengen_current_trip';
+
+function loadCurrentTrip() {
+  try { return JSON.parse(localStorage.getItem(CT_KEY)); }
+  catch { return null; }
+}
+
+function saveCurrentTrip(trip) {
+  if (trip) localStorage.setItem(CT_KEY, JSON.stringify(trip));
+  else localStorage.removeItem(CT_KEY);
+}
+
+function startCurrentTrip() {
+  const entry = document.getElementById('currentEntryDate').value;
+  const country = document.getElementById('currentCountry').value.trim();
+  if (!entry) return;
+  saveCurrentTrip({ entry, country });
+  render();
+}
+
+function endCurrentTrip() {
+  const ct = loadCurrentTrip();
+  if (!ct) return;
+  // Save as completed trip with exit = today
+  const trips = loadTrips();
+  trips.push({ entry: ct.entry, exit: fmt(new Date()), country: ct.country || '' });
+  saveTrips(trips);
+  saveCurrentTrip(null);
+  render();
+}
+
+function renderCurrentTrip() {
+  const ct = loadCurrentTrip();
+  const form = document.getElementById('currentTripContent');
+  const active = document.getElementById('currentTripActive');
+
+  if (!ct) {
+    form.style.display = '';
+    active.style.display = 'none';
+    document.getElementById('currentEntryDate').value = fmt(new Date());
+    return;
+  }
+
+  form.style.display = 'none';
+  active.style.display = '';
+
+  const today = new Date(); today.setHours(0,0,0,0);
+  const entryDate = toDate(ct.entry);
+  const daysSoFar = daysBetween(entryDate, today) + 1;
+
+  // Build trips including current as ongoing
+  const trips = loadTrips();
+  const allTrips = [...trips, { entry: ct.entry, exit: fmt(today), country: ct.country || '' }];
+  const used = calcDaysUsed(allTrips);
+
+  // Calculate how many more days can stay
+  let canStayUntil = null;
+  let daysLeft = 0;
+  for (let offset = 0; offset < 180; offset++) {
+    const future = addDays(today, offset);
+    const hypo = [...trips, { entry: ct.entry, exit: fmt(future), country: '' }];
+    if (calcDaysUsed(hypo, future) > 90) {
+      if (offset === 0) { canStayUntil = today; daysLeft = 0; }
+      else { canStayUntil = addDays(today, offset - 1); daysLeft = offset - 1; }
+      break;
+    }
+    if (offset === 179) { canStayUntil = future; daysLeft = 179; }
+  }
+
+  // Simple remaining: 90 minus what's used today (no future falloffs)
+  const simpleRemaining = Math.max(0, 90 - used);
+
+  const countryLabel = ct.country ? ` · ${ct.country}` : '';
+  document.getElementById('currentTripSummary').textContent = `since ${fmtMed(entryDate)}${countryLabel}`;
+  document.getElementById('ctEntered').textContent = fmtMed(entryDate);
+  document.getElementById('ctDaysSoFar').textContent = `${daysSoFar} day${daysSoFar !== 1 ? 's' : ''}`;
+  document.getElementById('ctUsedOf90').textContent = `${used} / 90`;
+  document.getElementById('ctSimpleRemaining').textContent = `${simpleRemaining} day${simpleRemaining !== 1 ? 's' : ''}`;
+
+  const simpleEl = document.getElementById('ctSimpleRemaining');
+  if (simpleRemaining <= 7) simpleEl.style.color = 'var(--red)';
+  else if (simpleRemaining <= 14) simpleEl.style.color = 'var(--amber)';
+  else simpleEl.style.color = 'var(--green)';
+
+  // Falloff section — only show if past trips will fall off and extend the stay
+  const windowStart = addDays(today, -179);
+  const activePastTrips = trips.filter(t => toDate(t.exit) >= windowStart && toDate(t.exit) < today);
+  const falloffSection = document.getElementById('ctFalloffSection');
+  const falloffEl = document.getElementById('ctFalloffInfo');
+
+  if (activePastTrips.length > 0 && daysLeft > simpleRemaining) {
+    falloffSection.style.display = '';
+
+    document.getElementById('ctCanStayUntil').textContent = canStayUntil ? fmtMed(canStayUntil) : '—';
+    document.getElementById('ctDaysLeft').textContent = `${daysLeft} day${daysLeft !== 1 ? 's' : ''}`;
+
+    const daysLeftEl = document.getElementById('ctDaysLeft');
+    if (daysLeft <= 7) daysLeftEl.style.color = 'var(--red)';
+    else if (daysLeft <= 14) daysLeftEl.style.color = 'var(--amber)';
+    else daysLeftEl.style.color = 'var(--green)';
+
+    const falloffs = activePastTrips.map(t => {
+      const exitDate = toDate(t.exit);
+      const entryD = toDate(t.entry) < windowStart ? windowStart : toDate(t.entry);
+      const tripDays = daysBetween(entryD, exitDate) + 1;
+      const fallsOff = addDays(exitDate, 180);
+      const daysUntil = daysBetween(today, fallsOff);
+      return { fallsOff, daysUntil, tripDays, entry: t.entry, exit: t.exit };
+    }).sort((a, b) => a.daysUntil - b.daysUntil);
+
+    falloffEl.innerHTML = falloffs.map(f => `<div class="falloff-item">
+        <span>${f.tripDays} day${f.tripDays !== 1 ? 's' : ''} from ${fmtShort(toDate(f.entry))}</span>
+        <span class="falloff-date">+${f.tripDays} on ${fmtShort(f.fallsOff)} (${f.daysUntil}d)</span>
+      </div>`).join('');
+  } else {
+    falloffSection.style.display = 'none';
+  }
+}
+
+function togglePastTrip() {
+  const card = document.getElementById('pastTripCard');
+  const arrow = document.getElementById('pastTripArrow');
+  const isOpen = card.style.display !== 'none';
+  card.style.display = isOpen ? 'none' : '';
+  arrow.classList.toggle('open', !isOpen);
+}
+
+// --- Actions ---
+function resetForm() {
+  entryInput.value = fmt(new Date());
+  exitInput.value = fmt(addDays(new Date(), 1));
+  document.getElementById('country').value = '';
+  lastEntryValue = entryInput.value;
+  updateHint();
+}
+
+function addTrip() {
+  const entry = document.getElementById('entryDate').value;
+  const exit = document.getElementById('exitDate').value;
+  const country = document.getElementById('country').value.trim();
+  if (!entry || !exit) return;
+  if (exit < entry) { alert('Exit must be on or after entry.'); return; }
+  const trips = loadTrips();
+  trips.push({ entry, exit, country });
+  saveTrips(trips);
+  resetForm();
+  render();
+}
+
+function deleteTrip(idx) {
+  const trips = loadTrips();
+  trips.splice(idx, 1);
+  saveTrips(trips);
+  render();
+}
+
+function editTrip(idx) {
+  const trips = loadTrips();
+  const t = trips[idx];
+  const li = document.getElementById(`trip-${idx}`);
+  if (!li || li.querySelector('.edit-form')) return;
+
+  const editHtml = `<div class="edit-form">
+    <div class="edit-row">
+      <div class="edit-field">
+        <label>Entry</label>
+        <input type="date" id="edit-entry-${idx}" value="${t.entry}">
+      </div>
+      <div class="edit-field">
+        <label>Exit</label>
+        <input type="date" id="edit-exit-${idx}" value="${t.exit}">
+      </div>
+    </div>
+    <div class="edit-field">
+      <label>Country</label>
+      <input type="text" id="edit-country-${idx}" value="${t.country || ''}" placeholder="e.g. France">
+    </div>
+    <div class="edit-buttons">
+      <button type="button" class="btn-save" onclick="saveEdit(${idx})">Save</button>
+      <button type="button" class="btn-cancel" onclick="render()">Cancel</button>
+    </div>
+  </div>`;
+
+  li.insertAdjacentHTML('beforeend', editHtml);
+}
+
+function saveEdit(idx) {
+  const entry = document.getElementById(`edit-entry-${idx}`).value;
+  const exit = document.getElementById(`edit-exit-${idx}`).value;
+  const country = document.getElementById(`edit-country-${idx}`).value.trim();
+  if (!entry || !exit) return;
+  if (exit < entry) { alert('Exit must be on or after entry.'); return; }
+  const trips = loadTrips();
+  trips[idx] = { entry, exit, country };
+  saveTrips(trips);
+  render();
+}
+
+// --- Smart date defaults ---
+const entryInput = document.getElementById('entryDate');
+const exitInput = document.getElementById('exitDate');
+const tripHint = document.getElementById('tripHint');
+
+entryInput.value = fmt(new Date());
+exitInput.value = fmt(addDays(new Date(), 1));
+
+function updateHint() {
+  if (entryInput.value && exitInput.value && exitInput.value >= entryInput.value) {
+    const days = daysBetween(toDate(entryInput.value), toDate(exitInput.value)) + 1;
+    tripHint.textContent = `${days} day${days !== 1 ? 's' : ''}`;
+  } else {
+    tripHint.textContent = '1 day';
+  }
+}
+
+function adjustDuration(delta) {
+  if (!entryInput.value || !exitInput.value) return;
+  const currentDays = daysBetween(toDate(entryInput.value), toDate(exitInput.value)) + 1;
+  const newDays = Math.max(1, currentDays + delta);
+  exitInput.value = fmt(addDays(toDate(entryInput.value), newDays - 1));
+  updateHint();
+}
+
+// preventDefault on mousedown stops entry from losing focus — no blur/change fires at all
+document.querySelectorAll('.btn-dur').forEach(btn => {
+  btn.addEventListener('mousedown', (e) => { e.preventDefault(); });
+});
+
+entryInput.addEventListener('change', () => {
+  exitInput.value = fmt(addDays(toDate(entryInput.value), 1));
+  updateHint();
+});
+
+exitInput.addEventListener('change', updateHint);
+updateHint();
+
+render();
+</script>
+</body>
+</html>
