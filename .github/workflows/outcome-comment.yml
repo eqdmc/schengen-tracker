@@ -1,0 +1,12 @@
+name: "Outcome Comment"
+
+on:
+  pull_request:
+    branches: [main]
+    types: [closed]
+
+jobs:
+  outcome:
+    if: github.event.pull_request.merged == true
+    uses: eqdmc/.github/.github/workflows/outcome-comment.yml@main
+    secrets: inherit
