@@ -1,0 +1,10 @@
+name: "Auto-Update Branches"
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  update:
+    uses: eqdmc/.github/.github/workflows/auto-update-branch.yml@main
+    secrets: inherit
