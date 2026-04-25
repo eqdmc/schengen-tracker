@@ -5,7 +5,7 @@ on:
     types: [labeled]
 
 jobs:
-  implement:
+  process:
     if: github.event.label.name == 'agent-work'
     uses: eqdmc/.github/.github/workflows/agent-process-issue.yml@main
     with:
