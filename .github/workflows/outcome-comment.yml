@@ -6,7 +6,65 @@ on:
     types: [closed]
 
 jobs:
-  outcome:
-    if: github.event.pull_request.merged == true
-    uses: eqdmc/.github/.github/workflows/outcome-comment.yml@main
-    secrets: inherit
+  post-outcome:
+    name: "Post outcome on linked issue"
+    if: |
+      github.event.pull_request.merged == true &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      pull-requests: read
+    steps:
+      - name: Build and post outcome comment
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+          PR_ADDITIONS: ${{ github.event.pull_request.additions }}
+          PR_DELETIONS: ${{ github.event.pull_request.deletions }}
+          PR_CHANGED_FILES: ${{ github.event.pull_request.changed_files }}
+          PR_MERGE_SHA: ${{ github.event.pull_request.merge_commit_sha }}
+          LABELS: ${{ toJSON(github.event.pull_request.labels.*.name) }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+
+          issues=$(printf '%s' "$PR_BODY" \
+            | grep -oiE '(close[sd]?|fix(e[sd])?|resolve[sd]?) +#[0-9]+' \
+            | grep -oE '#[0-9]+' | tr -d '#' | sort -u || true)
+
+          if [ -z "$issues" ]; then
+            echo "No linked issue trailer found — skipping." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
+          summary=$(printf '%s' "$PR_BODY" | awk 'NF {print; exit}' | head -c 200)
+          [ -z "$summary" ] && summary="(no description)"
+
+          risk=$(echo "$LABELS" | jq -r '.[] | select(startswith("risk:"))' | head -1)
+          [ -z "$risk" ] && risk="not classified"
+
+          checks_json=$(gh api "repos/$REPO/commits/$PR_MERGE_SHA/check-runs" --paginate 2>/dev/null || echo '{"check_runs":[]}')
+          total=$(echo "$checks_json" | jq '[.check_runs[]] | length')
+          passed=$(echo "$checks_json" | jq '[.check_runs[] | select(.conclusion=="success" or .conclusion=="skipped" or .conclusion=="neutral")] | length')
+          if [ "$total" = "0" ]; then
+            checks_line="none recorded"
+          else
+            checks_line="${passed}/${total} green"
+          fi
+
+          for n in $issues; do
+            body=$(cat <<EOF
+          Issue #${n} shipped via \`${PR_TITLE}\`.
+
+          Scope: ${PR_CHANGED_FILES} files, +${PR_ADDITIONS} / -${PR_DELETIONS} lines
+          Checks: ${checks_line}
+          Risk: ${risk}
+          PR: #${PR_NUMBER}
+          EOF
+          )
+            gh issue comment "$n" --repo "$REPO" --body "$body" || \
+              echo "Failed to post on issue #${n}" >> "$GITHUB_STEP_SUMMARY"
+          done
