@@ -5,6 +5,27 @@ on:
     branches: [main]
 
 jobs:
-  update:
-    uses: eqdmc/.github/.github/workflows/auto-update-branch.yml@main
-    secrets: inherit
+  update-stale-branches:
+    name: "Update branches behind main"
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+      contents: write
+    steps:
+      - name: Update queued PRs
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: |
+          echo "A push to main detected. Updating open PRs with auto-merge enabled..."
+
+          gh pr list --repo "$REPO" --state open --json number,headRefName,autoMergeRequest \
+            --jq '.[] | select(.autoMergeRequest != null) | .number' | while read -r pr_num; do
+
+            echo "Updating PR #${pr_num}..."
+            gh api "repos/${REPO}/pulls/${pr_num}/update-branch" \
+              --method PUT \
+              -f update_method="merge" 2>&1 || echo "  Could not update PR #${pr_num} (may already be up-to-date)"
+          done
+
+          echo "Done. Updated PRs will re-run CI automatically."
