@@ -1,0 +1,108 @@
+name: "Agent: Review PR"
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+concurrency:
+  group: agent-review-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  gate:
+    if: contains(github.event.pull_request.labels.*.name, 'agent-work')
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: read
+    outputs:
+      proceed: ${{ steps.check.outputs.proceed }}
+      pr: ${{ steps.check.outputs.pr }}
+    steps:
+      - name: Check PR state
+        id: check
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR: ${{ github.event.pull_request.number }}
+        run: |
+          set -euo pipefail
+          reviews=$(gh pr view "$PR" \
+            -R "${{ github.repository }}" \
+            --json reviews --jq '[.reviews[] | select(.authorAssociation != "NONE")] | length')
+          if [ "$reviews" -gt 0 ]; then
+            echo "PR already has reviews, skipping agent review"
+            echo "proceed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          labels=$(gh pr view "$PR" -R "${{ github.repository }}" \
+            --json labels --jq '.labels[].name' | tr '\n' ',')
+          if echo "$labels" | grep -qE '(^|,)review:agent-complete(,|$)'; then
+            echo "PR already reviewed by agent, skipping"
+            echo "proceed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "proceed=true" >> "$GITHUB_OUTPUT"
+          echo "pr=$PR" >> "$GITHUB_OUTPUT"
+
+  review:
+    needs: gate
+    if: needs.gate.outputs.proceed == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Review PR with OpenCode
+        uses: anomalyco/opencode/github@latest
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          model: anthropic/claude-sonnet-4-6
+          prompt: |
+            You are an independent reviewer for PR #${{ needs.gate.outputs.pr }} on ${{ github.repository }}.
+
+            You are a DIFFERENT agent from whoever wrote this PR.
+            Do not defer to their decisions. Read the diff with fresh eyes.
+
+            Procedure:
+              1. Fetch the PR diff: `gh pr diff ${{ needs.gate.outputs.pr }} -R ${{ github.repository }}`
+              2. Fetch the parent issue(s) referenced via `Closes #N` in the PR body.
+              3. For each parent issue, fetch its acceptance checklist.
+              4. Check each checklist item against the diff. Unchecked items = blocking.
+              5. Apply the 4-pass review: security, correctness, architecture, quality.
+              6. Compose a SINGLE review comment in Conventional Comments format.
+
+            Output contract:
+              - POST a PR comment via `gh pr comment ${{ needs.gate.outputs.pr }} -R ${{ github.repository }} --body "..."`.
+              - If you find ANY blocking issues, also:
+                  1. Convert PR to draft: `gh pr ready ${{ needs.gate.outputs.pr }} --undo -R ${{ github.repository }}`
+                  2. Add label: `gh pr edit ${{ needs.gate.outputs.pr }} --add-label "review:agent-failed" -R ${{ github.repository }}`
+              - If ALL checks pass (no blocking issues):
+                  1. Add label: `gh pr edit ${{ needs.gate.outputs.pr }} --add-label "review:agent-complete" -R ${{ github.repository }}`
+
+            Hard constraints:
+              - DO NOT fix anything yourself. File findings only.
+              - DO NOT merge anything. Merges are human-only.
+              - DO NOT edit any files. Read-only review.
+              - DO NOT approve via GitHub review events (APPROVE / REQUEST_CHANGES).
+
+            Format (Conventional Comments):
+              - `issue (blocking): path/file.py:42 — <subject>` for bugs/security
+              - `suggestion (non-blocking): …` for improvements
+              - `question (blocking): …` for clarification needed
+              - `nitpick (non-blocking): …` for style
+              - `praise: …` for things done well
+              - End with:
+                **Summary:** N blocking, N non-blocking, N praise
+                **Verdict:** Pass | Pass with suggestions | Needs changes | Needs discussion
