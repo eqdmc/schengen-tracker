@@ -4,10 +4,109 @@ on:
   issues:
     types: [labeled]
 
+concurrency:
+  group: agent-issue-${{ github.event.issue.number }}
+  cancel-in-progress: false
+
 jobs:
-  process:
+  validate:
     if: github.event.label.name == 'agent-work'
-    uses: eqdmc/.github/.github/workflows/_agent-process-issue.yml@main
-    with:
-      issue-number: ${{ github.event.issue.number }}
-    secrets: inherit
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    outputs:
+      proceed: ${{ steps.check.outputs.proceed }}
+      issue: ${{ steps.check.outputs.issue }}
+    steps:
+      - name: Check safety labels
+        id: check
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ISSUE: ${{ github.event.issue.number }}
+        run: |
+          set -euo pipefail
+          labels=$(gh issue view "$ISSUE" \
+            -R "${{ github.repository }}" \
+            --json labels --jq '.labels[].name' | tr '\n' ',')
+
+          if echo "$labels" | grep -qE '(^|,)risk:high(,|$)'; then
+            gh issue comment "$ISSUE" -R "${{ github.repository }}" \
+              --body "Agent refused: \`risk:high\` requires human execution."
+            echo "proceed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          if echo "$labels" | grep -qE '(^|,)role:founder-only(,|$)'; then
+            gh issue comment "$ISSUE" -R "${{ github.repository }}" \
+              --body "Agent refused: \`role:founder-only\` is author-inline work, not dispatchable."
+            echo "proceed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          if echo "$labels" | grep -qE '(^|,)needs-human(,|$)'; then
+            echo "Issue has needs-human label, waiting for human response"
+            echo "proceed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "proceed=true" >> "$GITHUB_OUTPUT"
+          echo "issue=$ISSUE" >> "$GITHUB_OUTPUT"
+
+  implement:
+    needs: validate
+    if: needs.validate.outputs.proceed == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Process issue with Claude
+        uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          claude_args: |
+            --max-turns 25
+            --model claude-sonnet-4-6
+          prompt: |
+            You are processing issue #${{ needs.validate.outputs.issue }} on ${{ github.repository }}.
+
+            Read the issue body and ALL comments carefully.
+
+            If a "## Human Response" comment exists, the previous agent session
+            requested human input and the user has responded. Continue from
+            where the previous agent left off using that response.
+
+            Your contract:
+              1. Follow the "## What" and "## Acceptance checklist" sections exactly.
+              2. Do not expand scope. If the checklist is ambiguous, comment on
+                 the issue using the "## Needs Human Input" format below, add the
+                 needs-human label, and stop.
+              3. Run every verification check listed in the issue before opening
+                 a PR. If any fails, fix and retry — do not open a broken PR.
+              4. Open a PR titled with conventional format (type: subject) and
+                 body containing "Closes #${{ needs.validate.outputs.issue }}".
+              5. Add labels: agent-work, risk:low (unless issue specifies otherwise),
+                 ready-to-merge.
+              6. Do NOT modify .github/workflows/ or rules/*.md or settings.json
+                 unless the issue explicitly requires it and has risk:medium+.
+              7. Do NOT self-merge.
+
+            If you hit ambiguity or need human feedback, comment on the issue
+            using this exact format, then add the `needs-human` label and stop:
+
+            ## Needs Human Input
+
+            **Type:** decision | approval | clarification | execution
+            **Question:** [specific question]
+            **Options:** (if applicable)
+            - A: [option]
+            - B: [option]
+            **Context:** [what you tried, what you found]
