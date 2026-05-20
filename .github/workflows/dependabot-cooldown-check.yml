@@ -1,0 +1,56 @@
+# Managed by eqdmc/.github — do not edit. Changes overwritten on next sync.
+name: "Dependabot Cooldown Check"
+
+on:
+  schedule:
+    - cron: "30 */6 * * *"
+  workflow_dispatch:
+
+permissions:
+  pull-requests: write
+  contents: write
+
+jobs:
+  check-quarantined-prs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          sparse-checkout: config/conventions.json
+          sparse-checkout-cone-mode: false
+
+      - name: Load cooldown config
+        id: config
+        run: |
+          cfg="config/conventions.json"
+          echo "cooldown=$(jq -r '.dependency_cooldown_days // 7' "$cfg")" >> "$GITHUB_OUTPUT"
+
+      - name: Enable auto-merge on cooled-down PRs
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          COOLDOWN_DAYS: ${{ steps.config.outputs.cooldown }}
+        run: |
+          now_epoch=$(date +%s)
+
+          while read -r pr_num created_at; do
+            [ -z "$pr_num" ] && continue
+            created_epoch=$(date -d "$created_at" +%s 2>/dev/null) || continue
+            age_days=$(( (now_epoch - created_epoch) / 86400 ))
+
+            if [ "$age_days" -ge "$COOLDOWN_DAYS" ]; then
+              echo "PR #${pr_num}: ${age_days}d old (>= ${COOLDOWN_DAYS}d cooldown) — enabling auto-merge"
+              gh pr merge "$pr_num" --repo "$REPO" --auto --squash 2>&1 || echo "  Failed on PR #${pr_num}"
+            else
+              remaining=$((COOLDOWN_DAYS - age_days))
+              echo "PR #${pr_num}: ${age_days}d old — ${remaining}d remaining"
+            fi
+          done < <(gh pr list --repo "$REPO" --state open --author "app/dependabot" \
+            --json number,createdAt,autoMergeRequest \
+            --jq '.[] | select(.autoMergeRequest == null) | "\(.number) \(.createdAt)"')
+
+          {
+            echo "### Dependabot Cooldown Check"
+            echo "Cooldown: ${COOLDOWN_DAYS}d (from \`config/conventions.json\`)"
+            echo "Checked at: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          } >> "$GITHUB_STEP_SUMMARY"
