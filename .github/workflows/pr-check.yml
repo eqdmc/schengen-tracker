@@ -13,22 +13,22 @@ permissions:
 
 jobs:
   path-guard:
-    uses: eqdmc/.github/.github/workflows/path-guard.yml@main
+    uses: eqdmc/.github/.github/workflows/path-guard.yml@b087f95132c12c9b5858e3ab8a1449e188a189c5 # v0.1.0
     secrets: inherit
 
   pr-metadata:
-    uses: eqdmc/.github/.github/workflows/pr-metadata-check.yml@main
+    uses: eqdmc/.github/.github/workflows/pr-metadata-check.yml@b087f95132c12c9b5858e3ab8a1449e188a189c5 # v0.1.0
     secrets: inherit
 
   auto-merge:
     needs: [pr-metadata]
-    uses: eqdmc/.github/.github/workflows/auto-merge.yml@main
+    uses: eqdmc/.github/.github/workflows/auto-merge.yml@b087f95132c12c9b5858e3ab8a1449e188a189c5 # v0.1.0
     secrets: inherit
 
   dependabot-automerge:
-    uses: eqdmc/.github/.github/workflows/dependabot-automerge.yml@main
+    uses: eqdmc/.github/.github/workflows/dependabot-automerge.yml@b087f95132c12c9b5858e3ab8a1449e188a189c5 # v0.1.0
     secrets: inherit
 
   deps-vetting:
-    uses: eqdmc/.github/.github/workflows/deps-vetting.yml@main
+    uses: eqdmc/.github/.github/workflows/deps-vetting.yml@b087f95132c12c9b5858e3ab8a1449e188a189c5 # v0.1.0
     secrets: inherit
