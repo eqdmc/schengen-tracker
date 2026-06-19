@@ -5,6 +5,7 @@ on:
   pull_request:
     branches: [main]
     types: [opened, synchronize, reopened, labeled, unlabeled]
+  merge_group:
 
 permissions:
   contents: write
@@ -13,22 +14,26 @@ permissions:
 
 jobs:
   path-guard:
-    uses: eqdmc/.github/.github/workflows/path-guard.yml@b087f95132c12c9b5858e3ab8a1449e188a189c5 # v0.1.0
+    uses: eqdmc/.github/.github/workflows/path-guard.yml@0e2e6782bb211966f41570a030a88b64257d2ff7 # v0.2.0
     secrets: inherit
 
   pr-metadata:
-    uses: eqdmc/.github/.github/workflows/pr-metadata-check.yml@b087f95132c12c9b5858e3ab8a1449e188a189c5 # v0.1.0
+    uses: eqdmc/.github/.github/workflows/pr-metadata-check.yml@0e2e6782bb211966f41570a030a88b64257d2ff7 # v0.2.0
     secrets: inherit
 
   auto-merge:
     needs: [pr-metadata]
-    uses: eqdmc/.github/.github/workflows/auto-merge.yml@b087f95132c12c9b5858e3ab8a1449e188a189c5 # v0.1.0
+    uses: eqdmc/.github/.github/workflows/auto-merge.yml@0e2e6782bb211966f41570a030a88b64257d2ff7 # v0.2.0
     secrets: inherit
 
   dependabot-automerge:
-    uses: eqdmc/.github/.github/workflows/dependabot-automerge.yml@b087f95132c12c9b5858e3ab8a1449e188a189c5 # v0.1.0
+    uses: eqdmc/.github/.github/workflows/dependabot-automerge.yml@0e2e6782bb211966f41570a030a88b64257d2ff7 # v0.2.0
+    secrets: inherit
+
+  auto-label:
+    uses: eqdmc/.github/.github/workflows/auto-label.yml@0e2e6782bb211966f41570a030a88b64257d2ff7 # v0.2.0
     secrets: inherit
 
   deps-vetting:
-    uses: eqdmc/.github/.github/workflows/deps-vetting.yml@b087f95132c12c9b5858e3ab8a1449e188a189c5 # v0.1.0
+    uses: eqdmc/.github/.github/workflows/deps-vetting.yml@0e2e6782bb211966f41570a030a88b64257d2ff7 # v0.2.0
     secrets: inherit
