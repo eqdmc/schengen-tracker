@@ -8,7 +8,7 @@ on:
 jobs:
   process:
     if: github.event.label.name == 'agent-work'
-    uses: eqdmc/.github/.github/workflows/_agent-process-issue.yml@0e2e6782bb211966f41570a030a88b64257d2ff7 # v0.2.0
+    uses: eqdmc/.github/.github/workflows/_agent-process-issue.yml@22772786de998dd16ef78b8cc7f87eac5be46457 # v0.2.1
     with:
       issue-number: ${{ github.event.issue.number }}
     secrets: inherit
