@@ -11,5 +11,5 @@ permissions:
 
 jobs:
   validate:
-    uses: eqdmc/.github/.github/workflows/issue-validate.yml@22772786de998dd16ef78b8cc7f87eac5be46457 # v0.2.1
+    uses: eqdmc/.github/.github/workflows/issue-validate.yml@724554ebf56d61de2b80d4a058cbed2a91b68a76 # v0.2.1
     secrets: inherit
