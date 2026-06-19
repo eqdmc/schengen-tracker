@@ -7,9 +7,9 @@ on:
 
 jobs:
   outcome:
-    uses: eqdmc/.github/.github/workflows/outcome-comment.yml@22772786de998dd16ef78b8cc7f87eac5be46457 # v0.2.1
+    uses: eqdmc/.github/.github/workflows/outcome-comment.yml@724554ebf56d61de2b80d4a058cbed2a91b68a76 # v0.2.1
     secrets: inherit
 
   update-queued:
-    uses: eqdmc/.github/.github/workflows/auto-update-branch.yml@22772786de998dd16ef78b8cc7f87eac5be46457 # v0.2.1
+    uses: eqdmc/.github/.github/workflows/auto-update-branch.yml@724554ebf56d61de2b80d4a058cbed2a91b68a76 # v0.2.1
     secrets: inherit
