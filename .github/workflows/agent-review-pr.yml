@@ -5,6 +5,10 @@ on:
   pull_request:
     types: [opened, synchronize, reopened, labeled]
 
+permissions:
+  pull-requests: write
+  contents: read
+
 jobs:
   review:
     if: contains(github.event.pull_request.labels.*.name, 'agent-work')
