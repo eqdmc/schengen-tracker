@@ -13,21 +13,8 @@ permissions:
   issues: read
 
 jobs:
-  path-guard:
-    uses: eqdmc/.github/.github/workflows/path-guard.yml@724554ebf56d61de2b80d4a058cbed2a91b68a76 # v0.2.1
-    secrets: inherit
-
   pr-metadata:
     uses: eqdmc/.github/.github/workflows/pr-metadata-check.yml@724554ebf56d61de2b80d4a058cbed2a91b68a76 # v0.2.1
-    secrets: inherit
-
-  auto-merge:
-    needs: [pr-metadata]
-    uses: eqdmc/.github/.github/workflows/auto-merge.yml@724554ebf56d61de2b80d4a058cbed2a91b68a76 # v0.2.1
-    secrets: inherit
-
-  dependabot-automerge:
-    uses: eqdmc/.github/.github/workflows/dependabot-automerge.yml@724554ebf56d61de2b80d4a058cbed2a91b68a76 # v0.2.1
     secrets: inherit
 
   auto-label:
