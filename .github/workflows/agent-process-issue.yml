@@ -5,6 +5,10 @@ on:
   issues:
     types: [labeled]
 
+permissions:
+  issues: write
+  contents: read
+
 jobs:
   process:
     if: github.event.label.name == 'agent-work'
