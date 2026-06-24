@@ -5,6 +5,10 @@ on:
   pull_request_target:
     types: [closed]
 
+permissions:
+  pull-requests: write
+  contents: read
+
 jobs:
   outcome:
     uses: eqdmc/.github/.github/workflows/outcome-comment.yml@724554ebf56d61de2b80d4a058cbed2a91b68a76 # v0.2.1
