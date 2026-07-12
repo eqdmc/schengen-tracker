@@ -1,0 +1,15 @@
+# eqdmc org-wide CODEOWNERS template
+# Synced to all repos by apply-config.py --codeowners
+# 
+# Order: most specific patterns first, least specific last.
+# GitHub uses the LAST matching pattern for each file.
+
+# CI/CD workflow protection — any change requires admin review
+.github/workflows/* @eqdmc-admin
+.github/actions/* @eqdmc-admin
+
+# Root-level governance files
+/.github/CODEOWNERS @eqdmc-admin
+/CONTRIBUTING.md @eqdmc-admin
+/SECURITY.md @eqdmc-admin
+/CODE_OF_CONDUCT.md @eqdmc-admin
