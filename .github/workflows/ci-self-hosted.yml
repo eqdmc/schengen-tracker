@@ -1,0 +1,18 @@
+# Deployed from eqdmc/.github — calls reusable self-hosted CI.
+# Uses eqdmc-build runner group for faster CI.
+name: ci
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  merge_group:
+
+permissions:
+  contents: read
+
+jobs:
+  ci:
+    uses: eqdmc/.github/.github/workflows/ci-self-hosted.yml@61abcf66189f5007c82a57ecb5e9955afdd953ad
+    secrets: inherit
