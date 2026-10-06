@@ -1,0 +1,23 @@
+# Authorized actors — command and control for eqdmc repositories.
+#
+# Default-deny: only the identities listed here may open a pull request.
+# Keep this list minimal; it is protected by CODEOWNERS (human approval required).
+#
+# Humans act through the hardware signer and Rax; agents act through the
+# credential broker using their role App installation.
+
+humans:
+  - eqdmc-admin
+  - z
+
+# One App per role (ADR-0024/0026). merge-bot and admin-bot intentionally do NOT
+# author PRs: merge-bot only merges, admin-bot is human-gated.
+agents:
+  - app/eqdmc-agent-bot
+  - app/eqdmc-build-bot
+  - app/eqdmc-session-bot
+  - app/eqdmc-ci-bot
+  - app/eqdmc-bootstrap-bot
+
+# Dependency-update bot (security patches). It only opens version-bump PRs.
+  - dependabot[bot]
