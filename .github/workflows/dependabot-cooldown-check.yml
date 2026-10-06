@@ -14,7 +14,7 @@ jobs:
   check-quarantined-prs:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@dd72949cef701b798b19519cc69455e02a12f866 # v4
+      - uses: actions/checkout@c9771a931a76ad9085e81817b33da08e5e3dd853
         with:
           sparse-checkout: config/conventions.json
           sparse-checkout-cone-mode: false

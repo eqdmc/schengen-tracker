@@ -14,5 +14,5 @@ permissions:
 
 jobs:
   ci:
-    uses: eqdmc/.github/.github/workflows/ci.yml@main
+    uses: eqdmc/.github/.github/workflows/ci.yml@c9771a931a76ad9085e81817b33da08e5e3dd853
     secrets: inherit

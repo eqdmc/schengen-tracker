@@ -12,7 +12,7 @@ permissions:
 jobs:
   review:
     if: contains(github.event.pull_request.labels.*.name, 'agent-work')
-    uses: eqdmc/.github/.github/workflows/_agent-review-pr.yml@dd72949cef701b798b19519cc69455e02a12f866 # v0.2.1
+    uses: eqdmc/.github/.github/workflows/_agent-review-pr.yml@c9771a931a76ad9085e81817b33da08e5e3dd853
     with:
       pr-number: ${{ github.event.pull_request.number }}
     secrets: inherit
