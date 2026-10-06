@@ -13,13 +13,13 @@ permissions:
 
 jobs:
   pr-metadata:
-    uses: eqdmc/.github/.github/workflows/pr-metadata-check.yml@724554ebf56d61de2b80d4a058cbed2a91b68a76 # v0.2.1
+    uses: eqdmc/.github/.github/workflows/pr-metadata-check.yml@dd72949cef701b798b19519cc69455e02a12f866 # v0.2.1
     secrets: inherit
 
   auto-label:
-    uses: eqdmc/.github/.github/workflows/auto-label.yml@724554ebf56d61de2b80d4a058cbed2a91b68a76 # v0.2.1
+    uses: eqdmc/.github/.github/workflows/auto-label.yml@dd72949cef701b798b19519cc69455e02a12f866 # v0.2.1
     secrets: inherit
 
   deps-vetting:
-    uses: eqdmc/.github/.github/workflows/deps-vetting.yml@724554ebf56d61de2b80d4a058cbed2a91b68a76 # v0.2.1
+    uses: eqdmc/.github/.github/workflows/deps-vetting.yml@dd72949cef701b798b19519cc69455e02a12f866 # v0.2.1
     secrets: inherit
