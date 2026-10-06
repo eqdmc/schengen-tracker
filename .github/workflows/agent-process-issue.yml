@@ -12,7 +12,7 @@ permissions:
 jobs:
   process:
     if: github.event.label.name == 'agent-work'
-    uses: eqdmc/.github/.github/workflows/_agent-process-issue.yml@724554ebf56d61de2b80d4a058cbed2a91b68a76 # v0.2.1
+    uses: eqdmc/.github/.github/workflows/_agent-process-issue.yml@dd72949cef701b798b19519cc69455e02a12f866 # v0.2.1
     with:
       issue-number: ${{ github.event.issue.number }}
     secrets: inherit
