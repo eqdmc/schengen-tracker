@@ -1,0 +1,248 @@
+{
+  "_comment": "The actor registry: every identity that may act on eqdmc repositories, and the ceiling of what it may do. THIS IS THE SSOT. config/authorized-actors.yml is generated from it, and infra's broker identity policy derives from it -- do not hand-edit either. See ADR-0024/0026 (one App per role), ADR-0018 (broker request contract), ADR-0029 (scope every request to one repo).",
+  "_ceiling_vs_request": "An App's permissions are the CEILING -- the blast radius of a stolen key. A broker request may ask for LESS: {\"repo\": \"eqdmc/x\", \"permissions\": {\"contents\": \"write\"}} mints a token with no issues or pull_requests rights. So a NEW APP is warranted only for a new CEILING that defends a control; a lower need is a scoped request and needs no App at all. This is why there is no push-bot (see #630).",
+  "_reachability": "human_only = only a human at the host; host = the Unix socket (a human or a host process); network = mintable from a krun VM over the network. bin/security-invariants asserts the privileged ones; nothing holding workflows write may be network-reachable.",
+  "_status": "active = the App exists and is installed; planned = intended but NOT created, so it may not be an authorized actor.",
+  "version": 1,
+  "humans": {
+    "eqdmc-admin": {
+      "kind": "human",
+      "signing": "hardware",
+      "note": "Primary admin. Acts through Rax and the hardware signer; holds the YubiKey."
+    },
+    "z": {
+      "kind": "human",
+      "signing": "hardware",
+      "note": "Founder account."
+    }
+  },
+  "apps": {
+    "eqdmc-admin-bot": {
+      "tier": 0,
+      "app_id": 4274936,
+      "install_id": 145963636,
+      "key": "0-eqdmc-admin-bot.pem.age",
+      "permissions": {
+        "administration": "write",
+        "members": "read"
+      },
+      "reachability": "human_only",
+      "status": "active",
+      "authors_prs": false,
+      "defends": "Org config-as-code: rulesets, labels, repo settings, runner groups.",
+      "note": "The only identity that may change org configuration. Replaces the ORG_CONFIG_TOKEN fine-grained PAT (#626). `human_only` is enforced by the `admin-apply` environment: the reconciler that mints it waits for @eqdmc-admin (#739). Without a reviewer there, the reachability is aspirational."
+    },
+    "eqdmc-agent-bot": {
+      "tier": 1,
+      "app_id": 4182479,
+      "install_id": 143517448,
+      "key": "1-eqdmc-agent-bot.pem.age",
+      "permissions": {
+        "checks": "read",
+        "contents": "write",
+        "issues": "write",
+        "pull_requests": "write"
+      },
+      "reachability": "network",
+      "status": "active",
+      "authors_prs": true,
+      "default_identity": true,
+      "defends": "The authoring identity. It can push branches and open PRs, but it cannot merge, cannot edit workflows, and cannot administrate. checks:read is a read of public check results that defends no control -- it is what lets the identity that is told to run `gh pr checks` actually run it (#687).",
+      "note": "Installed org-wide. Its ceiling is deliberately short of merge, workflows and administration. checks:read needs the App grant in the org's App settings (#687); until that lands the registry is ahead of the live installation, and generate-identities.py --verify reports the drift."
+    },
+    "eqdmc-merge-bot": {
+      "tier": 2,
+      "app_id": 4125320,
+      "install_id": 142188577,
+      "key": "2-eqdmc-merge-bot.pem.age",
+      "permissions": {
+        "contents": "write",
+        "pull_requests": "write",
+        "checks": "write"
+      },
+      "reachability": "host",
+      "status": "active",
+      "authors_prs": false,
+      "bypasses": [
+        "main-protection",
+        "tag-protection"
+      ],
+      "defends": "The only identity that may bypass branch protection to merge or tag.",
+      "note": "Must never be network-reachable -- an agent that could reach it could merge around every gate. Asserted in bin/security-invariants."
+    },
+    "eqdmc-build-bot": {
+      "tier": 3,
+      "app_id": 4217927,
+      "install_id": 144448339,
+      "key": "3-eqdmc-build-bot.pem.age",
+      "permissions": {
+        "actions": "read",
+        "checks": "read",
+        "contents": "read"
+      },
+      "reachability": "network",
+      "status": "active",
+      "authors_prs": false,
+      "defends": "Read-only CI and runner state. actions:write was never needed -- runner-ops.yml uses only read, and a dispatch can reach a job's secrets, so the write was a control it did not have to hold (#631). checks:read is what lets an agent see why a PR is blocked (#687).",
+      "note": "Reduced to actions:read + checks:read (#631). It no longer authors a PR: it lacks contents:write and pull_requests:write, so the allowlist entry was dead. Serves the `ops` profile."
+    },
+    "eqdmc-session-bot": {
+      "tier": 4,
+      "app_id": 4275346,
+      "install_id": 145964453,
+      "key": "4-eqdmc-session-bot.pem.age",
+      "permissions": {
+        "issues": "write",
+        "checks": "write"
+      },
+      "reachability": "network",
+      "status": "active",
+      "authors_prs": false,
+      "defends": "The identity of the session-orchestrator webhook receiver (docker/session-orchestrator/server.py): it verifies GitHub deliveries, parses typed-issue metadata and routes to rax, agent or deploy. issues:write (comment) + checks:write (publish a check run) is the minimum for that job.",
+      "note": "NAMED CONSUMER: the session-orchestrator, deployed by bin/session-orch-deploy (`*Session-orchestrator via eqdmc-session-bot*`). #632's premise -- 'no webhook receiver exists' -- was false: the service, its WEBHOOK_SECRET and its compose file all exist. Do NOT retire the App while that consumer references it; confirm the orchestrator is live before pruning EITHER. It does not author a PR -- it holds no contents:write/pull_requests:write -- so `authors_prs: false` drops a dead allowlist entry."
+    },
+    "eqdmc-ci-bot": {
+      "tier": 6,
+      "app_id": 4474269,
+      "install_id": 150960793,
+      "key": "6-eqdmc-ci-bot.pem.age",
+      "permissions": {
+        "contents": "write",
+        "workflows": "write",
+        "pull_requests": "write"
+      },
+      "reachability": "host",
+      "status": "active",
+      "authors_prs": true,
+      "defends": "Workflow edits. workflows:write is the one permission that can rewrite a workflow to print a secret, so it is host-only. It also holds pull_requests:write so it can open the PR for the change it pushed -- without that, no bot can author a workflow PR, the human authors it, the human becomes the required CODEOWNER reviewer, and every such merge needs --admin, which bypasses every required check.",
+      "note": "Host-only and un-bypassing. Adding pull_requests:write does not widen the blast radius an agent can reach: the network gate still cannot select it."
+    }
+  },
+  "_decisions": {
+    "_comment": "Non-App decisions that shape the set, recorded here so the rule survives the issue that produced it.",
+    "eqdmc-push-bot": "REJECTED, never created (#630): contents:write is a strict subset of agent-bot's ceiling and the broker already mints it as a scoped request -- {\"repo\": ..., \"permissions\": {\"contents\": \"write\"}}. A lower ceiling is a request, not an App.",
+    "eqdmc-bootstrap-bot": "REJECTED, never created (#1569): app_id 0. contents:write is a strict subset of agent-bot's ceiling and the broker mints it as a scoped request (ADR-0029); bootstrap is a time-bounded PROFILE lease (bin/eqdmc-bootstrap-auth, infra#1624), not an App. The dead token request was removed with the identity."
+  },
+  "bots": {
+    "dependabot[bot]": {
+      "kind": "bot",
+      "authors_prs": true,
+      "purpose": "Dependency version bumps only."
+    }
+  },
+  "_authoring_note": "authors_prs is AUTHORISATION (a policy choice). Capability is derivable: an App can only open a PR with contents:write AND pull_requests:write. The generator reports authorised-but-incapable apps rather than silently dropping them -- a permissions table taken from prose notes is not ground truth until it is verified against GitHub's installation API. A third permission matters for authoring: pull_requests:write. An App without it cannot open the PR for the branch it pushed, which is how the rax ended up using the human's credentials and the required CODEOWNERS review became unsatisfiable (#646).",
+  "_namespace": "One namespace, derived not decorated. An App's key is `N-eqdmc-<name>.pem.age` where N is its tier; its login is `eqdmc-<name>-bot`; its profile is `<name>`. Secrets are `EQDMC_*`, labels `<prefix>:<value>`, workflows `<concern>.yml`. The registry is where a rename would have to happen, and the generator checks the key/tier agreement, so the namespace cannot drift in one file only.",
+  "_profiles": "A profile is a broker REQUEST, not an App. The broker mints a token scoped to it, so a role that needs less than its App's ceiling needs no new App (see #630). Two invariants: a profile may never exceed its App's ceiling, and no agent-callable profile may select an App that bypasses branch protection -- an agent asks for a merge (auto-merge), and the merge queue performs it.",
+  "profiles": {
+    "build": {
+      "app": "eqdmc-agent-bot",
+      "permissions": {
+        "contents": "write",
+        "pull_requests": "write",
+        "issues": "write"
+      },
+      "scope": [
+        "platform",
+        "service"
+      ],
+      "purpose": "Implement one issue: branch, commits, open a PR, comment on the issue."
+    },
+    "review": {
+      "app": "eqdmc-agent-bot",
+      "permissions": {
+        "contents": "read",
+        "pull_requests": "write",
+        "issues": "write"
+      },
+      "scope": [
+        "platform",
+        "service"
+      ],
+      "purpose": "Review a PR: read the diff, comment, approve or request changes."
+    },
+    "triage": {
+      "app": "eqdmc-agent-bot",
+      "permissions": {
+        "issues": "write",
+        "metadata": "read"
+      },
+      "scope": [
+        "platform",
+        "service",
+        "experimental"
+      ],
+      "purpose": "Labels, comments, close or reopen issues."
+    },
+    "merge": {
+      "app": "eqdmc-agent-bot",
+      "permissions": {
+        "contents": "write",
+        "pull_requests": "write"
+      },
+      "scope": [
+        "platform",
+        "service"
+      ],
+      "purpose": "Ask for a merge. This profile deliberately does NOT hold merge-bot: it enables auto-merge and lets the merge queue do the merge, so no workspace ever holds ruleset bypass. contents:write is required to ARM auto-merge (enablePullRequestAutoMerge is refused with contents:read) -- without it the orchestrator role cannot ask for a merge at all."
+    },
+    "ops": {
+      "app": "eqdmc-build-bot",
+      "permissions": {
+        "actions": "read",
+        "checks": "read"
+      },
+      "scope": [
+        "platform"
+      ],
+      "purpose": "Read runner and check state (runner-ops). Read-only until #631 decides whether actions:write is ever needed."
+    },
+    "workflows": {
+      "app": "eqdmc-ci-bot",
+      "permissions": {
+        "contents": "write",
+        "workflows": "write",
+        "pull_requests": "write"
+      },
+      "scope": [
+        "platform"
+      ],
+      "human_only": true,
+      "purpose": "Author a workflow change end to end on the host: push the branch and open the PR. The human then APPROVES -- a genuine second party -- instead of overriding with --admin. This is the only profile that may hold workflows:write, it is host-only, and it holds no ruleset bypass."
+    }
+  },
+  "_roles": "The org's SESSION roles (infra/config/agent-taxonomy.json: founder, bootstrap, recovery, build, research, advisor, review, orchestrator) mapped to a GitHub profile. One fact, one owner: the role taxonomy is infra's, the GitHub ceiling is this file's, and this map is the seam between them -- checked by bin/check-taxonomy (T1), so it cannot silently diverge. bin/identity-request resolves role -> profile -> broker request + git identity for a krun entrypoint or the orchestrator.",
+  "roles": {
+    "build": {
+      "profile": "build",
+      "note": "implement one issue: branch, commits, PR"
+    },
+    "review": {
+      "profile": "review",
+      "note": "read the diff, comment, approve or request changes"
+    },
+    "advisor": {
+      "profile": "triage",
+      "note": "discuss, label, comment on issues"
+    },
+    "research": {
+      "profile": "triage",
+      "note": "read widely, comment on issues"
+    },
+    "orchestrator": {
+      "profile": "merge",
+      "note": "coordinate; asks for merges, never bypasses"
+    },
+    "founder": {
+      "profile": "triage",
+      "note": "read and comment; deploys sub-sessions"
+    },
+    "bootstrap": {
+      "profile": "workflows",
+      "note": "the elevated HOST session: the only role that may edit a workflow"
+    },
+    "recovery": {
+      "profile": "workflows",
+      "note": "host-side repair of the platform"
+    }
+  }
+}
