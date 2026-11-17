@@ -1,32 +1,115 @@
 {
-  "_comment": "Single source of truth for PR and commit conventions. Read by pr-metadata-check.yml and issue-validate.yml at runtime. Update here, not in workflows.",
-  "commit_types": ["feat", "fix", "refactor", "docs", "test", "chore"],
-  "branch_prefixes": ["feat/", "fix/", "agent/", "refactor/", "chore/", "docs/", "test/"],
-  "bot_branch_prefixes": ["dependabot/"],
-  "bot_authors": ["dependabot[bot]", "renovate[bot]", "github-actions[bot]"],
-  "type_labels": ["agent-work", "enhancement", "bug", "fix", "feat", "docs", "chore", "refactor"],
+  "_comment": "Single source of truth for PR and commit conventions. Read at runtime by eqdmc/.github's workflows (pr.yml joins bot_authors and bot_branch_prefixes into a regex; issue.yml reads issue_templates; bin/pre-flight reads branch_max_age_days and branch_max_ahead; check-labels reads commit_types and type_labels) and by this repository's dependabot-cooldown-check.yml (dependency_cooldown_days). Update here, not in the workflows.",
+  "commit_types": [
+    "build",
+    "chore",
+    "ci",
+    "docs",
+    "feat",
+    "fix",
+    "perf",
+    "refactor",
+    "revert",
+    "security",
+    "style",
+    "test"
+  ],
+  "branch_prefixes": [
+    "agent/",
+    "build/",
+    "chore/",
+    "ci/",
+    "docs/",
+    "feat/",
+    "fix/",
+    "perf/",
+    "refactor/",
+    "revert/",
+    "security/",
+    "style/",
+    "test/"
+  ],
+  "bot_branch_prefixes": [
+    "dependabot/"
+  ],
+  "bot_authors": [
+    "dependabot\\[bot\\]",
+    "renovate\\[bot\\]",
+    "github-actions\\[bot\\]",
+    "eqdmc-agent-bot\\[bot\\]"
+  ],
+  "_bot_authors_note": "These are matched as a REGEX (pr.yml joins them with | and greps ^(...)$), so the brackets are escaped to mean a literal login. Unescaped, `dependabot[bot]` is the character class [bot] and matches nothing -- which silently turned off the bot exemption for every entry, and left the agent App missing entirely: an agent PR with no `Closes #N` failed `PR Check/metadata` (#791).",
+  "type_labels": [
+    "agent-work",
+    "bug",
+    "build",
+    "chore",
+    "ci",
+    "docs",
+    "feat",
+    "fix",
+    "perf",
+    "refactor",
+    "revert",
+    "security",
+    "style",
+    "test"
+  ],
   "dependency_cooldown_days": 7,
   "dependency_cooldown_major_days": 14,
+  "branch_max_age_days": 3,
+  "branch_max_ahead": 30,
+  "branch_enforcement": {
+    "require_preflight": true,
+    "require_preflight_exit_zero": true,
+    "stale_branch_block_days": 7,
+    "max_ahead_warn": 30,
+    "max_ahead_block": 50
+  },
+  "workflow_discipline": {
+    "description": "Pre-flight check must pass before any work session. PRs from stale or unrebased branches are blocked by CI.",
+    "preflight_location": "eqdmc/.github/bin/pre-flight",
+    "pr_check_rebased_job": "check-rebased (blocks if behind origin/main)"
+  },
   "issue_templates": {
     "agent-task": {
       "label": "agent-work",
-      "required_sections": ["Summary", "Acceptance criteria", "Verification", "Tier"]
+      "required_sections": [
+        "Summary",
+        "Acceptance criteria",
+        "Verification",
+        "Tier"
+      ]
     },
     "bootstrap-session": {
       "label": "bootstrap",
-      "required_sections": ["Reason", "Success criteria", "Child issues", "Scope"]
+      "required_sections": [
+        "Reason",
+        "Success criteria",
+        "Child issues",
+        "Scope"
+      ]
     },
     "epic": {
       "label": "epic",
-      "required_sections": ["Goal", "Success criteria", "Child issues"]
+      "required_sections": [
+        "Goal",
+        "Success criteria",
+        "Child issues"
+      ]
     },
     "bug": {
       "label": "fix",
-      "required_sections": ["What happened?", "Expected behavior"]
+      "required_sections": [
+        "What happened?",
+        "Expected behavior"
+      ]
     },
     "security": {
       "label": "risk:high",
-      "required_sections": ["What is the concern?"]
+      "required_sections": [
+        "What is the concern?"
+      ]
     },
     "idea": {
       "label": "idea",
@@ -34,7 +117,82 @@
     },
     "agent-escalation": {
       "label": "needs-human",
-      "required_sections": ["Blocking issue", "Reason", "What was attempted", "Files involved"]
+      "required_sections": [
+        "Blocking issue",
+        "Reason",
+        "What was attempted",
+        "Files involved"
+      ]
+    },
+    "rax": {
+      "label": "rax",
+      "required_sections": [
+        "Summary",
+        "Steps",
+        "Verification",
+        "Tier",
+        "Risk"
+      ]
+    },
+    "cycle": {
+      "labels": [
+        "epic",
+        "cycle"
+      ],
+      "fields": [
+        "summary",
+        "scope"
+      ]
+    },
+    "pitch": {
+      "labels": [
+        "pitch"
+      ],
+      "fields": [
+        "summary",
+        "context"
+      ]
+    },
+    "orchestrator-plan": {
+      "labels": [
+        "orchestrator-plan"
+      ],
+      "fields": [
+        "summary",
+        "task"
+      ]
+    },
+    "squad-session": {
+      "labels": [
+        "squad-session"
+      ],
+      "fields": [
+        "summary",
+        "squad-id",
+        "task"
+      ]
+    },
+    "rax-enroll-yubikey": {
+      "labels": [
+        "rax",
+        "agent-work",
+        "key-management"
+      ],
+      "fields": [
+        "summary",
+        "steps"
+      ]
+    },
+    "rax-reencrypt-github-app-key": {
+      "labels": [
+        "rax",
+        "agent-work",
+        "key-management"
+      ],
+      "fields": [
+        "summary",
+        "steps"
+      ]
     }
   }
 }
