@@ -1,0 +1,104 @@
+#!/usr/bin/env python3
+# Deployed to app repositories as a managed file (config/managed-files.json): this copy is the payload, not a tool
+# that runs here. An app declares its checks as data in config/ci-checks.json; this reads them.
+"""ci-checks - run a repository's declared checks, from its config/ci-checks.json.
+
+Every repository on the arc answers the same two questions the org's reusable CI asks:
+
+    bin/ci-checks --list --json --tier T0      which groups does this repo declare?
+    bin/ci-checks --group <name>               run one group
+
+This file is a MANAGED FILE: it arrives by `bin/sync-ssot.py --apply` from eqdmc/.github and an app must not edit it,
+exactly like bin/gate-guard. An app writes config/ci-checks.json (the data: groups, ids, tiers, argv) and this runs it.
+That split is the reason a new app does not have to copy a runner, and the reason a fix to the runner reaches every
+app at the next rails sync instead of at the next rewrite.
+
+Exit 0 when every check passes, 1 when one fails, 2 when the wiring cannot be read.
+"""
+from __future__ import annotations
+
+import argparse
+import json
+import subprocess
+import sys
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+WIRING = ROOT / "config" / "ci-checks.json"
+
+
+def load() -> dict:
+    if not WIRING.is_file():
+        raise SystemExit(f"could not tell: {WIRING} is missing, so this repo declares no checks")
+    return json.loads(WIRING.read_text(encoding="utf-8"))
+
+
+def groups_of(wiring: dict, tier: str | None) -> list[dict]:
+    out = []
+    for name, rows in (wiring.get("groups") or {}).items():
+        checks = [c for c in rows if tier is None or c.get("tier", "T0") == tier]
+        if checks:
+            out.append({"name": name, "checks": checks})
+    return out
+
+
+def run(check: dict) -> tuple[bool, str]:
+    argv = check.get("argv") or []
+    if not argv:
+        return False, "declares no argv"
+    completed = subprocess.run(argv, cwd=ROOT, capture_output=True, text=True, check=False)
+    return completed.returncode == 0, (completed.stdout + completed.stderr).strip()
+
+
+def main(argv: list[str]) -> int:
+    parser = argparse.ArgumentParser(description="run this repository's declared checks")
+    parser.add_argument("--list", action="store_true")
+    parser.add_argument("--json", action="store_true")
+    parser.add_argument("--tier", default=None, choices=["T0", "T1"])
+    parser.add_argument("--group", default=None)
+    parser.add_argument("--id", default=None)
+    args = parser.parse_args(argv)
+
+    wiring = load()
+    groups = groups_of(wiring, args.tier)
+
+    if args.list:
+        if args.json:
+            print(json.dumps({"groups": [{"name": g["name"], "checks": [c["id"] for c in g["checks"]]}
+                                         for g in groups]}))
+        else:
+            for group in groups:
+                print(f"{group['name']:<12} {', '.join(c['id'] for c in group['checks'])}")
+        return 0
+
+    selected = groups
+    if args.group:
+        selected = [g for g in groups if g["name"] == args.group]
+        if not selected:
+            print(f"could not tell: no group named {args.group!r}", file=sys.stderr)
+            return 2
+    checks = [c for g in selected for c in g["checks"]]
+    if args.id:
+        checks = [c for c in checks if c["id"] == args.id]
+        if not checks:
+            print(f"could not tell: no check named {args.id!r}", file=sys.stderr)
+            return 2
+
+    failed = []
+    for check in checks:
+        ok, output = run(check)
+        if output:
+            print(output)
+        print(f"{'ok  ' if ok else 'FAIL'}  {check['id']:<12} {check.get('description', '')}".rstrip())
+        if not ok:
+            failed.append(check["id"])
+
+    if failed:
+        print(f"\n{len(failed)} check(s) failed: {', '.join(failed)}")
+        return 1
+    print(f"\n{len(checks)} check(s) passed")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))

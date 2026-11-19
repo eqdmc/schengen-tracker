@@ -1,0 +1,74 @@
+#!/usr/bin/env python3
+"""gate-guard — required check for skip directives and authorized authors (#735).
+
+Fails (exit 1) on:
+  * a skip-CI directive in the PR title, body, or a commit message;
+  * a PR author not listed in `config/authorized-actors.yml` (default-deny).
+
+Human approval for protected paths is enforced by GitHub itself
+(`require_code_owner_review` + CODEOWNERS, and an org ruleset `required_reviewers`
+rule) — not here, so the result never depends on when this check last ran.
+
+Usage:
+  bin/gate-guard --repo eqdmc/infra --pr 735 [--policy config/authorized-actors.yml]
+"""
+from __future__ import annotations
+
+import argparse
+import json
+import subprocess
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent / "lib"))
+import gate_guard  # noqa: E402
+
+FIELDS = "title,body,author,commits"
+
+
+def gh(*args: str) -> str:
+    r = subprocess.run(["gh", *args], capture_output=True, text=True, timeout=60)
+    if r.returncode != 0:
+        raise SystemExit(f"gh {' '.join(args)} failed: {r.stderr.strip()[:200]}")
+    return r.stdout
+
+
+def load_policy(path: str) -> dict:
+    p = Path(path)
+    if not p.exists():
+        return {"humans": [], "agents": []}  # default-deny
+    import yaml
+    return yaml.safe_load(p.read_text()) or {}
+
+
+def main() -> int:
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--repo", required=True)
+    ap.add_argument("--pr", type=int, required=True)
+    ap.add_argument("--policy", default="config/authorized-actors.yml")
+    ap.add_argument("--json", action="store_true")
+    args = ap.parse_args()
+
+    d = json.loads(gh("pr", "view", str(args.pr), "--repo", args.repo,
+                      "--json", FIELDS))
+    violations = gate_guard.evaluate(
+        title=d.get("title", ""),
+        body=d.get("body", ""),
+        commits=d.get("commits", []),
+        author=(d.get("author") or {}).get("login", ""),
+        policy=load_policy(args.policy),
+    )
+
+    if args.json:
+        print(json.dumps({"violations": violations}, indent=2))
+    for v in violations:
+        print(f"gate-guard: VIOLATION: {v}", file=sys.stderr)
+    if violations:
+        print(f"gate-guard: FAIL ({len(violations)} violation(s))", file=sys.stderr)
+        return 1
+    print("gate-guard: PASS")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
