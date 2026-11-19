@@ -1,25 +1,25 @@
 # Managed by eqdmc/.github — do not edit. Changes overwritten on next sync.
+# Pins eqdmc/.github@v0.3.0 (0112136cd96e), a release-tag commit: immutable,
+# auditable, and what bin/eqdmc-workflow-pins requires.
 name: PR Check
 
 on:
   pull_request:
     branches: [main]
-    types: [opened, synchronize, reopened, labeled, unlabeled]
+    types: [opened, synchronize, reopened, labeled, unlabeled, edited]
 
+# The caller's grant is the ceiling for every callee job. pr.yml's label job
+# needs pull-requests:write + issues:write; deps.yml needs contents:read.
 permissions:
-  contents: write
+  contents: read
+  issues: write
   pull-requests: write
-  issues: read
 
 jobs:
-  pr-metadata:
-    uses: eqdmc/.github/.github/workflows/pr-metadata-check.yml@724554ebf56d61de2b80d4a058cbed2a91b68a76 # v0.2.1
+  pr:
+    uses: eqdmc/.github/.github/workflows/pr.yml@0112136cd96ec7c4a0e0596a116bd4a527b90827 # v0.3.0
     secrets: inherit
 
-  auto-label:
-    uses: eqdmc/.github/.github/workflows/auto-label.yml@724554ebf56d61de2b80d4a058cbed2a91b68a76 # v0.2.1
-    secrets: inherit
-
-  deps-vetting:
-    uses: eqdmc/.github/.github/workflows/deps-vetting.yml@724554ebf56d61de2b80d4a058cbed2a91b68a76 # v0.2.1
+  deps:
+    uses: eqdmc/.github/.github/workflows/deps.yml@0112136cd96ec7c4a0e0596a116bd4a527b90827 # v0.3.0
     secrets: inherit

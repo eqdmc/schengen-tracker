@@ -1,19 +1,32 @@
 # Managed by eqdmc/.github — do not edit. Changes overwritten on next sync.
 name: PR Merged
 
+# `pull_request: closed` plus a merged guard -- NEVER `pull_request_target`.
+# The target variant runs the BASE branch's workflow against a fork's code, which
+# infra's runner-registry check refuses by name:
+#   "[FAIL] pr-merged.yml: runs on pull_request_target -- it executes base-branch
+#    workflows against a fork's code"
+# It also made every repository's main red the moment sync-ssot deployed it
+# (eqdmc/infra main: ci / repo-checks (workflows) failure, 2026-11-19).
 on:
-  pull_request_target:
+  pull_request:
     types: [closed]
 
 permissions:
+  issues: write        # outcome-comment.yml comments on / closes the issue
   pull-requests: write
-  contents: read
+  contents: write      # auto-update-branch.yml updates queued PR branches
 
 jobs:
   outcome:
-    uses: eqdmc/.github/.github/workflows/outcome-comment.yml@724554ebf56d61de2b80d4a058cbed2a91b68a76 # v0.2.1
+    if: github.event.pull_request.merged == true
+    uses: eqdmc/.github/.github/workflows/outcome-comment.yml@0112136cd96ec7c4a0e0596a116bd4a527b90827 # v0.3.0
     secrets: inherit
 
   update-queued:
-    uses: eqdmc/.github/.github/workflows/auto-update-branch.yml@724554ebf56d61de2b80d4a058cbed2a91b68a76 # v0.2.1
+    # Only for a branch in THIS repository: it pushes to other PRs' branches.
+    if: >-
+      github.event.pull_request.merged == true &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    uses: eqdmc/.github/.github/workflows/auto-update-branch.yml@0112136cd96ec7c4a0e0596a116bd4a527b90827 # v0.3.0
     secrets: inherit

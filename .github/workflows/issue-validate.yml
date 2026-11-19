@@ -1,15 +1,19 @@
 # Managed by eqdmc/.github — do not edit. Changes overwritten on next sync.
+# Pins eqdmc/.github@v0.3.0 (0112136cd96e), a release-tag commit: immutable,
+# auditable, and what bin/eqdmc-workflow-pins requires.
 name: Issue validation
 
+# labeled is required: issue.yml's lifecycle job enforces the state machine on
+# label changes, and it can only run if the caller forwards that event.
 on:
   issues:
-    types: [opened, edited, reopened]
+    types: [opened, edited, reopened, labeled]
 
 permissions:
-  issues: write
   contents: read
+  issues: write
 
 jobs:
-  validate:
-    uses: eqdmc/.github/.github/workflows/issue-validate.yml@724554ebf56d61de2b80d4a058cbed2a91b68a76 # v0.2.1
+  issue:
+    uses: eqdmc/.github/.github/workflows/issue.yml@0112136cd96ec7c4a0e0596a116bd4a527b90827 # v0.3.0
     secrets: inherit
